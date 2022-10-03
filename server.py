@@ -202,7 +202,7 @@ def current_protest_and_event():
                 "outputs" : [
                     {
                         "simpleText" : {
-                            "text" : "현재 집회 및 행사 목록입니다." + "\n" + result
+                            "text" : "실시간 집회 및 행사 목록입니다." + "\n" + result
                         }
                     }
                 ]
@@ -223,7 +223,7 @@ def future_protest_and_event():
                 "outputs" : [
                     {
                         "simpleText" : {
-                            "text" : "예정 집회 및 행사가 없습니다."
+                            "text" : "오늘의 예정 집회 및 행사가 없습니다."
                         }
                     }
                 ]
@@ -276,7 +276,7 @@ def current_protest():
                 "outputs" : [
                     {
                         "simpleText" : {
-                            "text" : "현재 집회 및 시위 목록입니다." + "\n" + result
+                            "text" : "실시간 집회 및 시위 목록입니다." + "\n" + result
                         }
                     }
                 ]
