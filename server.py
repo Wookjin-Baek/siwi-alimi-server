@@ -295,8 +295,14 @@ def future_protest():
         today_day = datetime.datetime.now().day
         a = datetime.datetime.today().weekday()
         today_weekday = days[a]
-
-        search_key = str(today_month) + '월 ' + str(today_day) + '일 ' + '(' + (today_weekday) + ') ' + "집회 및 행사"
+        
+        search_key = ""
+        
+        if today_day < 10:
+            search_key = str(today_month) + '월 0' + str(today_day) + '일 ' + '(' + (today_weekday) + ') ' + "집회 및 행사"
+        else:
+            search_key = str(today_month) + '월 ' + str(today_day) + '일 ' + '(' + (today_weekday) + ') ' + "집회 및 행사"
+            
 
         options = initializeChromeOption()
         driver = mountChromeBrowser(options=options)
