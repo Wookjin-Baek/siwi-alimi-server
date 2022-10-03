@@ -29,27 +29,6 @@ def mountChromeBrowser(options=None):
     
     return driver
 
-def generateChecklistCurrent(date=None, type=None, location=None, restriction=None, alternative=None, detail=None):
-    checklist = []
-    if date is not None: checklist.append(0)
-    if type is not None: checklist.append(1)
-    if location is not None: checklist.append(2)
-    if restriction is not None: checklist.append(3)
-    if alternative is not None: checklist.append(4)
-    if detail is not None: checklist.append(5)
-    
-    return checklist
-
-def generateChecklistFuture(date=None, type=None, restriction=None, location=None, detail=None):
-    checklist = []
-    if date is not None: checklist.append(0)
-    if type is not None: checklist.append(1)
-    if restriction is not None: checklist.append(2)
-    if location is not None: checklist.append(3)
-    if detail is not None: checklist.append(4)
-    
-    return checklist
-
 def parseWebSite(driver=None, url=None):
     driver.get(url)
     driver.implicitly_wait(3)
@@ -59,8 +38,31 @@ def parseWebSite(driver=None, url=None):
 
     return soup
 
-def getNewInfo(soup=None, checklist=None, date=None, type=None, location=None, restriction=None, alternative=None, detail=None, flag='current'):
+def getEventInfo(soup=None, checklist=None, date=None, type=None, location=None, restriction=None, alternative=None, detail=None):
     raw_information = soup.find_all('td', 'last')
+    sub_length = 6
+    main_length = int(len(raw_information)/sub_length)
+
+    for index in range(0, main_length):
+        for subIndex in range(0, sub_length):
+            if subIndex in checklist:
+                str_information = str(raw_information[int(index*sub_length+subIndex)])
+                formatStart = [m.start() for m in re.finditer('<', str_information)]
+                formatEnd = [m.start() for m in re.finditer('>', str_information)]
+                str_information = preprocessRaw(str_information=str_information, formatStart=formatStart, formatEnd=formatEnd)
+                if subIndex == 0: date.append(str_information)
+                elif subIndex == 1: type.append(str_information)
+                elif subIndex == 2: location.append(str_information)
+                elif subIndex == 3: restriction.append(str_information)
+                elif subIndex == 4: alternative.append(str_information)
+                elif subIndex == 5: detail.append(str_information.replace('\n', ' '))
+                else: pass
+        
+    return date, type, location, restriction, alternative, detail
+
+def getProtestInfo(soup=None, checklist=None, date=None, type=None, location=None, restriction=None, alternative=None, detail=None, flag=None):
+    target = 'PROG' if flag == 'current' else 'PLAN' if flag == 'future' else None
+    raw_information = soup.find_all('ul', {'id': target})[0].find_all('td', 'last')
     sub_length = 6 if flag == 'current' else 5 if flag == 'future' else None
     main_length = int(len(raw_information)/sub_length)
 
@@ -74,9 +76,9 @@ def getNewInfo(soup=None, checklist=None, date=None, type=None, location=None, r
                 if flag == 'current':
                     if subIndex == 0: date.append(str_information)
                     elif subIndex == 1: type.append(str_information)
-                    elif subIndex == 2: location.append(str_information)
-                    elif subIndex == 3: restriction.append(str_information)
-                    elif subIndex == 4: alternative.append(str_information)
+                    elif subIndex == 2: restriction.append(str_information)
+                    elif subIndex == 3: alternative.append(str_information)
+                    elif subIndex == 4: location.append(str_information)
                     elif subIndex == 5: detail.append(str_information.replace('\n', ' '))
                 elif flag == 'future':
                     if subIndex == 0: date.append(str_information)
@@ -86,8 +88,8 @@ def getNewInfo(soup=None, checklist=None, date=None, type=None, location=None, r
                     elif subIndex == 4: detail.append(str_information.replace('\n', ' '))
             else:
                 pass
-
-    return date, type, location, restriction, alternative, detail
+    
+    return date, type, restriction, alternative, location, detail
 
 def preprocessRaw(str_information=None, formatStart=None, formatEnd=None):
     for formatIndex in range(0, len(formatStart)):
@@ -98,62 +100,88 @@ def preprocessRaw(str_information=None, formatStart=None, formatEnd=None):
     
     return str_information
 
-def prepareNextParsing(secs=60, date=None, type=None, location=None, restriction=None, alternative=None, detail=None):
-    time.sleep(secs)
-    if date is not None: date.clear()
-    if type is not None: type.clear()
-    if location is not None: location.clear()
-    if restriction is not None: restriction.clear()
-    if alternative is not None: alternative.clear()
-    if detail is not None: detail.clear()
-
-    return date, type, location, restriction, alternative, detail
-
-def extractTypeEvent(keyword=None, type=None):
-    event_list = []
-    for index in range(0, len(type)):
-        if type[index].find(keyword) != -1:
-            event_list.append(index)
+def generateChecklistEvent(date=None, type=None, location=None, restriction=None, alternative=None, detail=None):
+    checklist = []
+    if date is not None: checklist.append(0)
+    if type is not None: checklist.append(1)
+    if location is not None: checklist.append(2)
+    if restriction is not None: checklist.append(3)
+    if alternative is not None: checklist.append(4)
+    if detail is not None: checklist.append(5)
     
-    return event_list
+    return checklist
 
-def compareTwoDetail(detail1=None, detail2=None, event_list=None):
-    compare_list = []
-    for index in event_list:
-        for subIndex in range(0, len(detail2)):
-            if detail2[subIndex] == detail1[index]:
-                compare_list.append(subIndex)
+def generateChecklistProtest(date=None, type=None, restriction=None, alternative=None, location=None, detail=None, flag=None):
+    checklist = []
+    if date is not None: checklist.append(0)
+    if type is not None: checklist.append(1)
+    if restriction is not None: checklist.append(2)
+    if flag == 'current':
+        if alternative is not None: checklist.append(3)
+        if location is not None: checklist.append(4)
+        if detail is not None: checklist.append(5)
+    elif flag == 'future':
+        if location is not None: checklist.append(3)
+        if detail is not None: checklist.append(4)
+    
+    return checklist
 
-    return compare_list
+def getEvent():
+    options = initializeChromeOption()
+    driver = mountChromeBrowser(options=options)
 
+    url_event = 'https://topis.seoul.go.kr/map/openAccMap.do'
+    date, type, location, restriction, alternative, detail = [], [], None, [], None, [] # create lists for the event information
+    checklist_event = generateChecklistEvent(date=date, type=type, restriction=restriction, detail=detail)
+
+    soup_event = parseWebSite(driver=driver, url=url_event)
+    date, type, location, restriction, alternative, detail =  getEventInfo(soup=soup_event, checklist=checklist_event, date=date, type=type, restriction=restriction, detail=detail)
+    
+    result, count = "", 1
+    for index in range(0, len(date)):
+        result += f'{count}. 기간: {date[index]}\n'
+        result += f'유형/통제: {type[index]}/{restriction[index]}\n'
+        result += f'세부 사항: {detail[index]}\n'
+        count += 1
+    
+    return result
+
+def getProtest(flag=None):
+    options = initializeChromeOption()
+    driver = mountChromeBrowser(options=options)
+
+    url_protest = 'https://topis.seoul.go.kr/map/openControlMap.do'
+    date, type, location, restriction, alternative, detail = [], [], None, [], None, [] # create lists for the current protest information
+    checklist_protest = generateChecklistProtest(date=date, type=type, restriction=restriction, detail=detail, flag=flag)
+
+    soup_protest = parseWebSite(driver=driver, url=url_protest)
+    date, type, restriction, alternative, location, detail = getProtestInfo(soup=soup_protest, checklist=checklist_protest, date=date, type=type, restriction=restriction, detail=detail, flag=flag)
+
+    result, count = "", 1
+    for index in range(0, len(date)):
+        result += f'{count}. 기간: {date[index]}\n'
+        result += f'유형/통제: {type[index]}/{restriction[index]}\n'
+        result += f'세부 사항: {detail[index]}\n'
+        count += 1
+
+    return result
+
+def getCurrentProtest():
+    try:
+        return getProtest('current')
+    except IndexError:
+        return '현재 집회 및 시위가 없습니다.'
+
+def getFutureProtest():
+    return getProtest('future')
 
 ###### current and future protest and event
 
 
 @app.route('/current_protest_and_event', methods = ['POST'])
 def current_protest_and_event():
+    result = getEvent()
 
-    url_current = 'https://topis.seoul.go.kr/map/openAccMap.do'
-
-    type_list = ['집회및행사', '공사', '차량고장', '교통사고'] # add restriction types as many as possible
-    date, type, location, restriction, alternative, detail = [], [], None, [], None, [] # create lists for the information
-    checklist_current = generateChecklistCurrent(date=date, type=type, restriction=restriction, detail=detail)
-
-    options = initializeChromeOption()
-    driver = mountChromeBrowser(options=options)
-
-    soup_current = parseWebSite(driver=driver, url=url_current)
-    date, type, location, restriction, alternative, detail =  getNewInfo(soup=soup_current, checklist=checklist_current, date=date, type=type, restriction=restriction, detail=detail)
-    event_list = extractTypeEvent(type_list[0], type)
-        
-    result = ""
-    count = 1
-    for index in event_list:
-        result += f'{count}. 기간: {date[index]}\n'
-        result += f'유형/통제: {type[index]}/{restriction[index]}\n'
-        result += f'세부 사항: {detail[index]}'
-        count += 1
-    
     if not result:
         answer = {
             "version" : "2.0",
@@ -186,36 +214,7 @@ def current_protest_and_event():
 
 @app.route('/future_protest_and_event', methods = ['POST'])
 def future_protest_and_event():
-
-    url_current = 'https://topis.seoul.go.kr/map/openAccMap.do'
-    url_future = 'https://topis.seoul.go.kr/map/openControlMap.do'
-
-    type_list = ['집회및행사', '공사', '차량고장', '교통사고'] # add restriction types as many as possible
-    date, type, location, restriction, alternative, detail = [], [], None, [], None, [] # create lists for the information
-    date_next, type_next, restriction_next, location_next, detail_next = [], [], [], None, []
-    checklist_current = generateChecklistCurrent(date=date, type=type, restriction=restriction, detail=detail)
-    checklist_future = generateChecklistFuture(date=date_next, type=type_next, restriction=restriction_next, detail=detail_next)
-
-    options = initializeChromeOption()
-    driver = mountChromeBrowser(options=options)
-
-    soup_current = parseWebSite(driver=driver, url=url_current)
-    date, type, location, restriction, alternative, detail =  getNewInfo(soup=soup_current, checklist=checklist_current, date=date, type=type, restriction=restriction, detail=detail, flag='current')
-    event_list = extractTypeEvent(type_list[0], type)
-        
-    soup_future = parseWebSite(driver=driver, url=url_future)
-    date_next, type_next, location_next, restriction_next, alternative_next, detail_next =  getNewInfo(soup=soup_future, checklist=checklist_future, date=date_next, type=type_next, restriction=restriction_next, detail=detail_next, flag='future')
-    compare_list = compareTwoDetail(detail1=detail, detail2=detail_next, event_list=event_list)
-
-    result = ""
-    count = 1
-    for index in range(0, len(date_next)):
-        if index not in compare_list:
-            result += f'{count}. 기간: {date_next[index]}\n'
-            result += f'유형/통제: {type_next[index]}/{restriction_next[index]}\n'
-            result += f'세부 사항: {detail_next[index]}\n'
-            count += 1
-
+    result = getFutureProtest()
 
     if not result:
         answer = {
@@ -254,28 +253,7 @@ def future_protest_and_event():
 
 @app.route('/current_protest', methods = ['POST'])
 def current_protest():
-
-    url_current = 'https://topis.seoul.go.kr/map/openAccMap.do'
-
-    type_list = ['집회및행사(집회/시위)', '집회및행사(행사)', '공사', '차량고장', '교통사고'] # add restriction types as many as possible
-    date, type, location, restriction, alternative, detail = [], [], None, [], None, [] # create lists for the information
-    checklist_current = generateChecklistCurrent(date=date, type=type, restriction=restriction, detail=detail)
-
-    options = initializeChromeOption()
-    driver = mountChromeBrowser(options=options)
-
-    soup_current = parseWebSite(driver=driver, url=url_current)
-    date, type, location, restriction, alternative, detail =  getNewInfo(soup=soup_current, checklist=checklist_current, date=date, type=type, restriction=restriction, detail=detail)
-    event_list = extractTypeEvent(type_list[0], type)
-        
-    result = ""
-    count = 1
-    for index in event_list:
-        result += f'{count}. 기간: {date[index]}\n'
-        result += f'유형/통제: {type[index]}/{restriction[index]}\n'
-        result += f'세부 사항: {detail[index]}'
-        count += 1
-    
+    result = getCurrentProtest()
 
     if not result:
         answer = {
@@ -392,28 +370,7 @@ def future_protest():
 
 @app.route('/current_event', methods = ['POST'])
 def current_event():
-
-    url_current = 'https://topis.seoul.go.kr/map/openAccMap.do'
-
-    type_list = ['집회및행사(집회/시위)', '집회및행사(행사)', '공사', '차량고장', '교통사고'] # add restriction types as many as possible
-    date, type, location, restriction, alternative, detail = [], [], None, [], None, [] # create lists for the information
-    checklist_current = generateChecklistCurrent(date=date, type=type, restriction=restriction, detail=detail)
-
-    options = initializeChromeOption()
-    driver = mountChromeBrowser(options=options)
-
-    soup_current = parseWebSite(driver=driver, url=url_current)
-    date, type, location, restriction, alternative, detail =  getNewInfo(soup=soup_current, checklist=checklist_current, date=date, type=type, restriction=restriction, detail=detail)
-    event_list = extractTypeEvent(type_list[1], type)
-        
-    result = ""
-    count = 1
-    for index in event_list:
-        result += f'{count}. 기간: {date[index]}\n'
-        result += f'유형/통제: {type[index]}/{restriction[index]}\n'
-        result += f'세부 사항: {detail[index]}'
-        count += 1
-    
+    result = getEvent()
 
     if not result:
         answer = {
@@ -449,37 +406,8 @@ def current_event():
 
 @app.route('/future_event', methods = ['POST'])
 def future_event():
+    result = getFutureProtest()
 
-    url_current = 'https://topis.seoul.go.kr/map/openAccMap.do'
-    url_future = 'https://topis.seoul.go.kr/map/openControlMap.do'
-
-    type_list = ['집회및행사(집회/시위)', '집회및행사(행사)', '공사', '차량고장', '교통사고'] # add restriction types as many as possible
-    date, type, location, restriction, alternative, detail = [], [], None, [], None, [] # create lists for the information
-    date_next, type_next, restriction_next, location_next, detail_next = [], [], [], None, []
-    checklist_current = generateChecklistCurrent(date=date, type=type, restriction=restriction, detail=detail)
-    checklist_future = generateChecklistFuture(date=date_next, type=type_next, restriction=restriction_next, detail=detail_next)
-
-    options = initializeChromeOption()
-    driver = mountChromeBrowser(options=options)
-
-    soup_current = parseWebSite(driver=driver, url=url_current)
-    date, type, location, restriction, alternative, detail =  getNewInfo(soup=soup_current, checklist=checklist_current, date=date, type=type, restriction=restriction, detail=detail, flag='current')
-    event_list = extractTypeEvent(type_list[1], type)
-        
-    soup_future = parseWebSite(driver=driver, url=url_future)
-    date_next, type_next, location_next, restriction_next, alternative_next, detail_next =  getNewInfo(soup=soup_future, checklist=checklist_future, date=date_next, type=type_next, restriction=restriction_next, detail=detail_next, flag='future')
-    compare_list = compareTwoDetail(detail1=detail, detail2=detail_next, event_list=event_list)
-
-    result = ""
-    count = 1
-    for index in range(0, len(date_next)):
-        if index not in compare_list:
-            result += f'{count}. 기간: {date_next[index]}\n'
-            result += f'유형/통제: {type_next[index]}/{restriction_next[index]}\n'
-            result += f'세부 사항: {detail_next[index]}\n'
-            count += 1
-
-    
     if not result:
         answer = {
             "version" : "2.0",
